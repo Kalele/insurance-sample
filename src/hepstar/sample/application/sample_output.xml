@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Request>
+	<Authentication>
+		<Username>{USERNAME}</Username>
+		<Password>{PASSWORD}</Password>
+		<Channel>{CHANNEL}</Channel>
+		<Session>{SESSION}</Session>
+	</Authentication>
+	<RequestParameters>
+		<Insureds>
+			<Insured ID="1">
+				<Firstname>Henry</Firstname>
+				<Surname>Hsu</Surname>
+				<Residency>ZA</Residency>
+				<DOB>1990-01-01</DOB>
+			</Insured>
+		</Insureds>
+		<TravelInformation>
+			<StartDate>2025-05-02</StartDate>
+			<EndDate>2025-05-25</EndDate>
+			<DepartureCountry>ZA</DepartureCountry>
+			<CoverCountries>
+				<CoverCountry>IT</CoverCountry>
+			</CoverCountries>
+		</TravelInformation>
+	</RequestParameters>
+</Request>

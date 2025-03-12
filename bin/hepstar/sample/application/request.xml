@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Request>
+  <Authentication>
+    <Username>{USERNAME}</Username>
+    <Password>{PASSWORD}</Password>
+  </Authentication>
+  <RequestParameters>
+    <Insureds>
+      <Insured ID="{ID}">
+        <Firstname>{FIRSTNAME}</Firstname>
+        <Surname>{SURNAME}</Surname>
+        <Residency>{RESIDENCY}</Residency>
+        <DOB>{DOB}</DOB>
+      </Insured>
+    </Insureds>
+    <TravelInformation>
+      <StartDate>{STARTDATE}</StartDate>
+      <EndDate>{ENDDATE}</EndDate>
+      <DepartureCountry>{DEPARTURECOUNTRY}</DepartureCountry>
+      <CoverCountries>
+      	<CoverCountry>{COVERCOUNTRY}</CoverCountry>
+      </CoverCountries>
+    </TravelInformation>
+  </RequestParameters>
+</Request>

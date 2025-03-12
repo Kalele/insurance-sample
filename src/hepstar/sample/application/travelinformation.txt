@@ -1,0 +1,4 @@
+startdate=2020-01-02
+enddate=2020-02-25
+departurecountry=ZA
+covercountry=IT
