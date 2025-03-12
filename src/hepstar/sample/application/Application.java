@@ -1,10 +1,9 @@
 package hepstar.sample.application;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.List;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.*;
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
 import java.net.HttpURLConnection;
@@ -12,20 +11,35 @@ import java.net.URL;
 
 public class Application {
 
+    private static Map<String, String> readFileIntoMap(String filePath) {
+        Map<String, String> dataMap = new HashMap<>();
+
+        try {
+            List<String> lines = Files.readAllLines(Paths.get(filePath));
+            for (String line : lines) {
+                String[] parts = line.split("="); 
+                if (parts.length == 2) {
+                    dataMap.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+        } catch (IOException e) {
+            Logger.logError("Error reading file: " + filePath);
+            e.printStackTrace();
+        }
+
+        return dataMap;
+    }
+
     private static Insured getInsured() {
         Insured insured = new Insured();
 
-        try {
-            List<String> lines = Files.readAllLines(Paths.get(System.getProperty("user.dir") + "/src/hepstar/sample/application/insured.txt"));
-            insured.setFirstname(lines.get(0));
-            insured.setSurname(lines.get(1));
-            insured.setId(lines.get(2));
-            insured.setDob(lines.get(3));
-            insured.setResidency(lines.get(4));
-            Logger.logInfo("Insured information loaded successfully.");
-        } catch (IOException e) {
-            Logger.logError("Failed to read insured file: " + e.getMessage());
-        }
+        Map<String, String> insuredData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/insured.txt");
+
+        insured.setFirstname(insuredData.getOrDefault("firstname", ""));
+        insured.setSurname(insuredData.getOrDefault("surname", ""));
+        insured.setId(insuredData.getOrDefault("id", ""));
+        insured.setDob(insuredData.getOrDefault("dob", ""));
+        insured.setResidency(insuredData.getOrDefault("residency", ""));
 
         return insured;
     }
@@ -33,16 +47,12 @@ public class Application {
     private static TravelInformation getTravelInformation() {
         TravelInformation travelInformation = new TravelInformation();
 
-        try {
-            List<String> lines = Files.readAllLines(Paths.get(System.getProperty("user.dir") + "/src/hepstar/sample/application/travelinformation.txt"));
-            travelInformation.setStartdate(lines.get(0));
-            travelInformation.setEnddate(lines.get(1));
-            travelInformation.setDeparturecountry(lines.get(2));
-            travelInformation.setCovercountry(lines.get(3));
-            Logger.logInfo("Travel information loaded successfully.");
-        } catch (IOException e) {
-            Logger.logError("Failed to read travel information file: " + e.getMessage());
-        }
+        Map<String, String> travelData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/travelinformation.txt");
+
+        travelInformation.setStartdate(travelData.getOrDefault("startdate", ""));
+        travelInformation.setEnddate(travelData.getOrDefault("enddate", ""));
+        travelInformation.setDeparturecountry(travelData.getOrDefault("departurecountry", ""));
+        travelInformation.setCovercountry(travelData.getOrDefault("covercountry", ""));
 
         return travelInformation;
     }
@@ -57,6 +67,7 @@ public class Application {
             Document doc = dBuilder.parse(inputFile);
 
             doc.getDocumentElement().normalize();
+
             requestMessage = doc.getDocumentElement().getTextContent();
 
             requestMessage = requestMessage.replace("{FIRSTNAME}", insured.getFirstname());
@@ -70,9 +81,9 @@ public class Application {
             requestMessage = requestMessage.replace("{COVERCOUNTRY}", travelInformation.getCovercountry());
             requestMessage = requestMessage.replace("{SESSION}", UUID.randomUUID().toString());
 
-            Logger.logInfo("Request message created successfully.");
         } catch (Exception e) {
-            Logger.logError("Error while creating request message: " + e.getMessage());
+            Logger.logError("Error constructing request message");
+            e.printStackTrace();
         }
 
         return requestMessage;
@@ -84,6 +95,7 @@ public class Application {
         try {
             URL url = new URL("https://uat.gateway.insure/products/priced");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             connection.setRequestProperty("Content-Type", "application/xml");
@@ -102,9 +114,9 @@ public class Application {
                 responseMessage = response.toString();
             }
 
-            Logger.logInfo("Request sent successfully. Received response.");
         } catch (Exception e) {
-            Logger.logError("Error while sending request: " + e.getMessage());
+            Logger.logError("Error sending request message");
+            e.printStackTrace();
         }
 
         return responseMessage;
@@ -117,12 +129,10 @@ public class Application {
         TravelInformation travelInformation = getTravelInformation();
         String requestMessage = getRequestMessage(insured, travelInformation);
 
-        Logger.logDebug("Request Message: " + requestMessage);
-        
+        Logger.logInfo("Request Message: \n" + requestMessage);
+
         String responseMessage = sendRequestMessage(requestMessage);
 
-        Logger.logInfo("Response: " + responseMessage);
-
-        Logger.logInfo("Application finished.");
+        Logger.logInfo("Response Message: \n" + responseMessage);
     }
 }
