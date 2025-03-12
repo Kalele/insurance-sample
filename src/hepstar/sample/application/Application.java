@@ -3,9 +3,11 @@ package hepstar.sample.application;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.*;
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -68,18 +70,18 @@ public class Application {
 
             doc.getDocumentElement().normalize();
 
-            requestMessage = doc.getDocumentElement().getTextContent();
+            replaceXmlTagValue(doc, "Firstname", insured.getFirstname());
+            replaceXmlTagValue(doc, "Surname", insured.getSurname());
+            replaceXmlAttributeValue(doc, "Insured","ID", insured.getId());
+            replaceXmlTagValue(doc, "DOB", insured.getDob());
+            replaceXmlTagValue(doc, "Residency", insured.getResidency());
+            replaceXmlTagValue(doc, "StartDate", travelInformation.getStartdate());
+            replaceXmlTagValue(doc, "EndDate", travelInformation.getEnddate());
+            replaceXmlTagValue(doc, "DepartureCountry", travelInformation.getDeparturecountry());
+            replaceXmlTagValue(doc, "CoverCountry", travelInformation.getCovercountry());
+            replaceXmlTagValue(doc, "Session", UUID.randomUUID().toString());
 
-            requestMessage = requestMessage.replace("{FIRSTNAME}", insured.getFirstname());
-            requestMessage = requestMessage.replace("{SURNAME}", insured.getSurname());
-            requestMessage = requestMessage.replace("{ID}", insured.getId());
-            requestMessage = requestMessage.replace("{DOB}", insured.getDob());
-            requestMessage = requestMessage.replace("{RESIDENCY}", insured.getResidency());
-            requestMessage = requestMessage.replace("{STARTDATE}", travelInformation.getStartdate());
-            requestMessage = requestMessage.replace("{ENDDATE}", travelInformation.getEnddate());
-            requestMessage = requestMessage.replace("{DEPARTURECOUNTRY}", travelInformation.getDeparturecountry());
-            requestMessage = requestMessage.replace("{COVERCOUNTRY}", travelInformation.getCovercountry());
-            requestMessage = requestMessage.replace("{SESSION}", UUID.randomUUID().toString());
+            requestMessage = convertDocumentToString(doc);
 
         } catch (Exception e) {
             Logger.logError("Error constructing request message");
@@ -87,6 +89,43 @@ public class Application {
         }
 
         return requestMessage;
+    }
+
+    private static void replaceXmlTagValue(Document doc, String tagName, String value) {
+        NodeList nodeList = doc.getElementsByTagName(tagName);
+        if (nodeList.getLength() > 0) {
+            nodeList.item(0).setTextContent(value);
+        }
+    }
+
+
+    private static void replaceXmlAttributeValue(Document doc, String tagName, String attributeName, String value) {
+        NodeList nodeList = doc.getElementsByTagName(tagName);
+    
+        Node node = nodeList.item(0);
+        if (node.getNodeType() == Node.ELEMENT_NODE)        
+          if (nodeList.getLength() > 0) {
+            Element element = (Element) node;
+            if (element.hasAttribute(attributeName)) 
+              element.setAttribute(attributeName, value);           
+          }
+    }
+
+    private static String convertDocumentToString(Document doc) {
+      try {
+          TransformerFactory transformerFactory = TransformerFactory.newInstance();
+          Transformer transformer = transformerFactory.newTransformer();
+          transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+
+          StringWriter writer = new StringWriter();
+          transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        
+          return writer.getBuffer().toString();
+      } catch (TransformerException e) {
+          Logger.logError("Error converting document to string");
+          e.printStackTrace();
+          return "";
+      }   
     }
 
     private static String sendRequestMessage(String requestMessage) {
