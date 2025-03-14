@@ -1,0 +1,16 @@
+{
+    "java.project.referencedLibraries": [
+        "libs/junit-jupiter-api-5.7.2.jar",
+        "libs/junit-jupiter-engine-5.7.2.jar",
+        "libs/junit-platform-console-standalone-1.7.2.jar",
+        "libs/hamcrest-core-1.3.jar",
+        "libs/mockito-core-3.12.4.jar", 
+        "libs/byte-buddy-1.10.22.jar", 
+        "libs/byte-buddy-agent-1.10.22.jar",
+        "libs/objenesis-2.6.jar"  // Added objenesis library
+    ],
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.outputPath": "bin"
+}

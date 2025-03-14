@@ -12,156 +12,174 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class Application {
+
    public static final String API_USERNAME = "{USERNAME}";
    public static final String API_PASSWORD = "{PASSWORD}";
    public static final String CHANNEL = "{CHANNEL}";
 
-    private static Map<String, String> readFileIntoMap(String filePath) {
-        Map<String, String> dataMap = new HashMap<>();
-        try {
-            List<String> lines = Files.readAllLines(Paths.get(filePath));
-            for (String line : lines) {
-                String[] parts = line.split("="); 
-                if (parts.length == 2) {
-                    dataMap.put(parts[0].trim(), parts[1].trim());
-                }
-            }
-        } catch (IOException e) {
-            Logger.logError("Error reading file: " + filePath);
-            e.printStackTrace();
-        }
-        return dataMap;
-    }
+   private DocumentBuilderFactory dbFactory;
+   private DocumentBuilder dBuilder;
+   private TransformerFactory transformerFactory;
+   private HttpURLConnection connection;
 
-    private static Insured getInsured() {
-        Insured insured = new Insured();
-        Map<String, String> insuredData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/insured.txt");
-        insured.setFirstname(insuredData.getOrDefault("firstname", ""));
-        insured.setSurname(insuredData.getOrDefault("surname", ""));
-        insured.setId(insuredData.getOrDefault("id", ""));
-        insured.setDob(insuredData.getOrDefault("dob", ""));
-        insured.setResidency(insuredData.getOrDefault("residency", ""));
-        return insured;
-    }
+   public Application(DocumentBuilderFactory dbFactory, DocumentBuilder dBuilder, 
+                      TransformerFactory transformerFactory, HttpURLConnection connection) {
+       this.dbFactory = dbFactory;
+       this.dBuilder = dBuilder;
+       this.transformerFactory = transformerFactory;
+       this.connection = connection;
+   }
 
-    private static TravelInformation getTravelInformation() {
-        TravelInformation travelInformation = new TravelInformation();
-        Map<String, String> travelData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/travelinformation.txt");
-        travelInformation.setStartdate(travelData.getOrDefault("startdate", ""));
-        travelInformation.setEnddate(travelData.getOrDefault("enddate", ""));
-        travelInformation.setDeparturecountry(travelData.getOrDefault("departurecountry", ""));
-        travelInformation.setCovercountry(travelData.getOrDefault("covercountry", ""));
-        return travelInformation;
-    }
+   public Application() throws Exception {
+       this.dbFactory = DocumentBuilderFactory.newInstance();
+       this.dBuilder = dbFactory.newDocumentBuilder();
+       this.transformerFactory = TransformerFactory.newInstance();
+   }
 
-    private static String getRequestMessage(Insured insured, TravelInformation travelInformation) {
-        String requestMessage = "";
-        try {
-            File inputFile = new File(System.getProperty("user.dir") + "/src/hepstar/sample/application/request.xml");
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(inputFile);
+   private static Map<String, String> readFileIntoMap(String filePath) {
+       Map<String, String> dataMap = new HashMap<>();
+       try {
+           List<String> lines = Files.readAllLines(Paths.get(filePath));
+           for (String line : lines) {
+               String[] parts = line.split("="); 
+               if (parts.length == 2) {
+                   dataMap.put(parts[0].trim(), parts[1].trim());
+               }
+           }
+       } catch (IOException e) {
+           Logger.logError("Error reading file: " + filePath);
+           e.printStackTrace();
+       }
+       return dataMap;
+   }
 
-            doc.getDocumentElement().normalize();
+   private static Insured getInsured() {
+       Insured insured = new Insured();
+       Map<String, String> insuredData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/insured.txt");
+       insured.setFirstname(insuredData.getOrDefault("firstname", ""));
+       insured.setSurname(insuredData.getOrDefault("surname", ""));
+       insured.setId(insuredData.getOrDefault("id", ""));
+       insured.setDob(insuredData.getOrDefault("dob", ""));
+       insured.setResidency(insuredData.getOrDefault("residency", ""));
+       return insured;
+   }
 
-            replaceXmlTagValue(doc, "Username", API_USERNAME);
-            replaceXmlTagValue(doc, "Password", API_PASSWORD);
-            replaceXmlTagValue(doc, "Channel", CHANNEL);
-            replaceXmlTagValue(doc, "Firstname", insured.getFirstname());
-            replaceXmlTagValue(doc, "Surname", insured.getSurname());
-            replaceXmlAttributeValue(doc, "Insured", "ID", insured.getId());
-            replaceXmlTagValue(doc, "DOB", insured.getDob());
-            replaceXmlTagValue(doc, "Residency", insured.getResidency());
-            replaceXmlTagValue(doc, "StartDate", travelInformation.getStartdate());
-            replaceXmlTagValue(doc, "EndDate", travelInformation.getEnddate());
-            replaceXmlTagValue(doc, "DepartureCountry", travelInformation.getDeparturecountry());
-            replaceXmlTagValue(doc, "CoverCountry", travelInformation.getCovercountry());
-            replaceXmlTagValue(doc, "Session", UUID.randomUUID().toString());
+   private static TravelInformation getTravelInformation() {
+       TravelInformation travelInformation = new TravelInformation();
+       Map<String, String> travelData = readFileIntoMap(System.getProperty("user.dir") + "/src/hepstar/sample/application/travelinformation.txt");
+       travelInformation.setStartdate(travelData.getOrDefault("startdate", ""));
+       travelInformation.setEnddate(travelData.getOrDefault("enddate", ""));
+       travelInformation.setDeparturecountry(travelData.getOrDefault("departurecountry", ""));
+       travelInformation.setCovercountry(travelData.getOrDefault("covercountry", ""));
+       return travelInformation;
+   }
 
-            requestMessage = convertDocumentToString(doc);
-        } catch (Exception e) {
-            Logger.logError("Error constructing request message");
-            e.printStackTrace();
-        }
-        return requestMessage;
-    }
+   public String getRequestMessage(Insured insured, TravelInformation travelInformation) {
+       String requestMessage = "";
+       try {
+           File inputFile = new File(System.getProperty("user.dir") + "/src/hepstar/sample/application/request.xml");
+           Document doc = dBuilder.parse(inputFile);
 
-    private static void replaceXmlTagValue(Document doc, String tagName, String value) {
-        NodeList nodeList = doc.getElementsByTagName(tagName);
-        if (nodeList.getLength() > 0) {
-            nodeList.item(0).setTextContent(value);
-        }
-    }
+           doc.getDocumentElement().normalize();
 
-    private static void replaceXmlAttributeValue(Document doc, String tagName, String attributeName, String value) {
-        NodeList nodeList = doc.getElementsByTagName(tagName);
-        Node node = nodeList.item(0);
-        if (node.getNodeType() == Node.ELEMENT_NODE) {
-            if (nodeList.getLength() > 0) {
-                Element element = (Element) node;
-                if (element.hasAttribute(attributeName)) 
-                    element.setAttribute(attributeName, value);           
-            }
-        }
-    }
+           replaceXmlTagValue(doc, "Username", API_USERNAME);
+           replaceXmlTagValue(doc, "Password", API_PASSWORD);
+           replaceXmlTagValue(doc, "Channel", CHANNEL);
+           replaceXmlTagValue(doc, "Firstname", insured.getFirstname());
+           replaceXmlTagValue(doc, "Surname", insured.getSurname());
+           replaceXmlAttributeValue(doc, "Insured", "ID", insured.getId());
+           replaceXmlTagValue(doc, "DOB", insured.getDob());
+           replaceXmlTagValue(doc, "Residency", insured.getResidency());
+           replaceXmlTagValue(doc, "StartDate", travelInformation.getStartdate());
+           replaceXmlTagValue(doc, "EndDate", travelInformation.getEnddate());
+           replaceXmlTagValue(doc, "DepartureCountry", travelInformation.getDeparturecountry());
+           replaceXmlTagValue(doc, "CoverCountry", travelInformation.getCovercountry());
+           replaceXmlTagValue(doc, "Session", UUID.randomUUID().toString());
 
-    private static String convertDocumentToString(Document doc) {
-        try {
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+           requestMessage = convertDocumentToString(doc);
+       } catch (Exception e) {
+           Logger.logError("Error constructing request message");
+           e.printStackTrace();
+       }
+       return requestMessage;
+   }
 
-            StringWriter writer = new StringWriter();
-            transformer.transform(new DOMSource(doc), new StreamResult(writer));
-            return writer.getBuffer().toString();
-        } catch (TransformerException e) {
-            Logger.logError("Error converting document to string");
-            e.printStackTrace();
-            return "";
-        }   
-    }
+   private void replaceXmlTagValue(Document doc, String tagName, String value) {
+       NodeList nodeList = doc.getElementsByTagName(tagName);
+       if (nodeList.getLength() > 0) {
+           nodeList.item(0).setTextContent(value);
+       }
+   }
 
-    private static String sendRequestMessage(String requestMessage) {
-        String responseMessage = "";
-        try {
-            URL url = new URL("https://uat.gateway.insure/products/priced");
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+   private void replaceXmlAttributeValue(Document doc, String tagName, String attributeName, String value) {
+       NodeList nodeList = doc.getElementsByTagName(tagName);
+       Node node = nodeList.item(0);
+       if (node.getNodeType() == Node.ELEMENT_NODE) {
+           if (nodeList.getLength() > 0) {
+               Element element = (Element) node;
+               if (element.hasAttribute(attributeName)) 
+                   element.setAttribute(attributeName, value);           
+           }
+       }
+   }
 
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/xml");
+   private String convertDocumentToString(Document doc) {
+       try {
+           Transformer transformer = transformerFactory.newTransformer();
+           transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 
-            try (OutputStream os = connection.getOutputStream()) {
-                byte[] input = requestMessage.getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
+           StringWriter writer = new StringWriter();
+           transformer.transform(new DOMSource(doc), new StreamResult(writer));
+           return writer.getBuffer().toString();
+       } catch (TransformerException e) {
+           Logger.logError("Error converting document to string");
+           e.printStackTrace();
+           return "";
+       }   
+   }
 
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
-                StringBuilder response = new StringBuilder();
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-                responseMessage = response.toString();
-            }
-        } catch (Exception e) {
-            Logger.logError("Error sending request message");
-            e.printStackTrace();
-        }
-        return responseMessage;
-    }
+   private String sendRequestMessage(String requestMessage) {
+       String responseMessage = "";
+       try {
+           URL url = new URL("https://uat.gateway.insure/products/priced");
+           HttpURLConnection connection = (this.connection != null) ? this.connection : (HttpURLConnection) url.openConnection();
 
-    public static void main(String[] args) {
-        Logger.logInfo("Application started.");
+           connection.setRequestMethod("POST");
+           connection.setDoOutput(true);
+           connection.setRequestProperty("Content-Type", "application/xml");
 
-        Insured insured = getInsured();
-        TravelInformation travelInformation = getTravelInformation();
-        String requestMessage = getRequestMessage(insured, travelInformation);
+           try (OutputStream os = connection.getOutputStream()) {
+               byte[] input = requestMessage.getBytes("utf-8");
+               os.write(input, 0, input.length);
+           }
 
-        Logger.logInfo("Request Message: \n" + requestMessage);
+           try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+               StringBuilder response = new StringBuilder();
+               String responseLine;
+               while ((responseLine = br.readLine()) != null) {
+                   response.append(responseLine.trim());
+               }
+               responseMessage = response.toString();
+           }
+       } catch (Exception e) {
+           Logger.logError("Error sending request message");
+           e.printStackTrace();
+       }
+       return responseMessage;
+   }
 
-        String responseMessage = sendRequestMessage(requestMessage);
+   public static void main(String[] args) throws Exception {
+       Logger.logInfo("Application started.");
 
-        Logger.logInfo("Response Message: \n" + responseMessage);
-    }
+       Application app = new Application();
+       Insured insured = getInsured();
+       TravelInformation travelInformation = getTravelInformation();
+       String requestMessage = app.getRequestMessage(insured, travelInformation);
+
+       Logger.logInfo("Request Message: \n" + requestMessage);
+
+       String responseMessage = app.sendRequestMessage(requestMessage);
+
+       Logger.logInfo("Response Message: \n" + responseMessage);
+   }
 }
